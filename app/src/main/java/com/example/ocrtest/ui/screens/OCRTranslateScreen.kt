@@ -1,6 +1,9 @@
 package com.example.ocrtest.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,12 +15,14 @@ import com.example.ocrtest.data.models.OcrResult
 import com.example.ocrtest.ui.components.LanguageDropdown
 import com.example.ocrtest.viewmodel.TranslationViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OCRTranslateScreen(
     viewModel: TranslationViewModel = viewModel(),
-    onPickImage: () -> Unit // callback mở thư viện ảnh
+    onPickImage: () -> Unit,
+    onCaptureImage: () -> Unit
 ) {
-    val inputText by viewModel.inputText.collectAsState() // bind trực tiếp với ViewModel
+    val inputText by viewModel.inputText.collectAsState()
     var selectedLang by remember { mutableStateOf("vi") }
 
     val translationResult by viewModel.translationResult.collectAsState()
@@ -25,70 +30,121 @@ fun OCRTranslateScreen(
 
     LaunchedEffect(Unit) { viewModel.loadLanguages() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Nút chọn ảnh từ thư viện
-        Button(onClick = onPickImage, modifier = Modifier.fillMaxWidth()) {
-            Text("Chọn ảnh từ thư viện")
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("📖 OCR Translator", style = MaterialTheme.typography.titleLarge) }
+            )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Enter text from OCR:")
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = inputText,
-            onValueChange = { viewModel.setInputText(it) },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Type or paste OCR text here") }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Dropdown chọn ngôn ngữ đích
-        LanguageDropdown(
-            languages = languages,
-            selectedLang = selectedLang,
-            onLangSelected = { code -> selectedLang = code }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = { viewModel.translateText(inputText, selectedLang) },
-            modifier = Modifier.fillMaxWidth()
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Translate")
-        }
+            // Row buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ElevatedButton(
+                    onClick = onPickImage,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Photo, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Thư viện")
+                }
+                ElevatedButton(
+                    onClick = onCaptureImage,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Camera")
+                }
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            // Input card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                elevation = CardDefaults.cardElevation(6.dp)
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("OCR Text:", style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.height(6.dp))
+                    TextField(
+                        value = inputText,
+                        onValueChange = { viewModel.setInputText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Nhập hoặc dán văn bản OCR") },
+                        singleLine = false,
+                        maxLines = 6
+                    )
+                }
+            }
 
-        translationResult?.let { result ->
-            Text("Result:")
-            Spacer(modifier = Modifier.height(4.dp))
-            HighlightTranslatedText(result)
+            // Language + translate button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LanguageDropdown(
+                    languages = languages,
+                    selectedLang = selectedLang,
+                    onLangSelected = { code -> selectedLang = code },
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = { viewModel.translateText(inputText, selectedLang) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Dịch")
+                }
+            }
+
+            // Translation result
+            translationResult?.let { result ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF7F7F7)
+                    ),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("Kết quả:", style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.height(6.dp))
+                        HighlightTranslatedText(result)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 fun HighlightTranslatedText(result: OcrResult) {
-    // Build AnnotatedString để highlight từ dịch
     val annotatedString = buildAnnotatedString {
         append(result.translatedText)
         result.wordMappings.forEach { mapping ->
-            // highlight bằng background yellow, bạn có thể thay màu
             addStyle(
-                style = SpanStyle(background = Color.Yellow),
+                style = SpanStyle(
+                    background = Color.Yellow,
+                    color = Color.Black
+                ),
                 start = mapping.translatedRange.first,
                 end = mapping.translatedRange.last + 1
             )
         }
     }
-
-    Text(annotatedString)
+    Text(
+        annotatedString,
+        style = MaterialTheme.typography.bodyLarge
+    )
 }
+

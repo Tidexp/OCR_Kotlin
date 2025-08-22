@@ -1,14 +1,18 @@
 package com.example.ocrtest
 
+import android.Manifest
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.material3.*
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.example.ocrtest.data.remotes.RetrofitClient
 import com.example.ocrtest.data.repository.TranslationRepository
 import com.example.ocrtest.ui.screens.OCRTranslateScreen
@@ -17,6 +21,7 @@ import com.example.ocrtest.viewmodel.TranslationViewModelFactory
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
@@ -29,31 +34,78 @@ class MainActivity : ComponentActivity() {
         TranslationViewModelFactory(translationRepository)
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    private var photoUri: android.net.Uri? = null
 
-        val pickImageLauncher = registerForActivityResult(
-            ActivityResultContracts.GetContent()
-        ) { uri ->
-            uri?.let { selectedUri ->
-                // Chuyển URI sang Bitmap
-                val bitmap = contentResolver.openInputStream(selectedUri)?.use {
-                    BitmapFactory.decodeStream(it)
-                }
-                bitmap?.let {
-                    runOCR(it) // Chạy ML Kit OCR
+    // Launcher xin quyền CAMERA
+    private val requestCameraPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                openCamera()
+            } else {
+                Toast.makeText(this, "Không có quyền camera", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    // Launcher chụp ảnh
+    private val takePictureLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+            if (success) {
+                photoUri?.let { uri ->
+                    val bitmap = contentResolver.openInputStream(uri)?.use {
+                        BitmapFactory.decodeStream(it)
+                    }
+                    bitmap?.let { runOCR(it) }
                 }
             }
         }
+
+    // Launcher chọn ảnh từ thư viện
+    private val pickImageLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let { selectedUri ->
+                val bitmap = contentResolver.openInputStream(selectedUri)?.use {
+                    BitmapFactory.decodeStream(it)
+                }
+                bitmap?.let { runOCR(it) }
+            }
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
         setContent {
             MaterialTheme {
                 OCRTranslateScreen(
                     viewModel = viewModel,
-                    onPickImage = { pickImageLauncher.launch("image/*") }
+                    onPickImage = { pickImageLauncher.launch("image/*") },
+                    onCaptureImage = { checkCameraPermissionAndCapture() } // thêm nút chụp ảnh
                 )
             }
         }
+    }
+
+    private fun checkCameraPermissionAndCapture() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            openCamera()
+        } else {
+            requestCameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun openCamera() {
+        val photoFile = File.createTempFile("ocr_photo_", ".jpg", cacheDir).apply {
+            createNewFile()
+            deleteOnExit()
+        }
+        val uri = FileProvider.getUriForFile(
+            this,
+            "${packageName}.provider",
+            photoFile
+        )
+        photoUri = uri
+        takePictureLauncher.launch(uri) // dùng uri cục bộ, không phải var nullable
     }
 
     private fun runOCR(bitmap: Bitmap) {
@@ -63,13 +115,10 @@ class MainActivity : ComponentActivity() {
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
                 val text = visionText.text
-                // Set text vào ViewModel
-                viewModel.setInputText(text)
+                viewModel.setInputText(text) // Set text vào ViewModel
             }
             .addOnFailureListener { e ->
                 Log.e("MainActivity", "OCR failed", e)
             }
     }
 }
-
-

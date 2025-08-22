@@ -11,11 +11,12 @@ import com.example.ocrtest.data.models.LanguageOption
 fun LanguageDropdown(
     languages: List<LanguageOption>,
     selectedLang: String,
-    onLangSelected: (String) -> Unit
+    onLangSelected: (String) -> Unit,
+    modifier: Modifier = Modifier // ➜ thêm tham số modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box {
+    Box(modifier = modifier) { // dùng modifier truyền vào
         Button(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
@@ -39,3 +40,4 @@ fun LanguageDropdown(
         }
     }
 }
+
