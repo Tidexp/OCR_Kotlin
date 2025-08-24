@@ -21,7 +21,7 @@ fun LanguageDropdown(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Translate to: ${selectedLang.uppercase()}")
+            Text("Language: ${selectedLang.uppercase()}")
         }
 
         DropdownMenu(

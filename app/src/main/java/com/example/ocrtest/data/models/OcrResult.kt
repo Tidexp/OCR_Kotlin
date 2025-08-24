@@ -19,6 +19,7 @@ package com.example.ocrtest.data.models
 data class OcrResult(
     val originalText: String,
     val translatedText: String,
+    val detectedLanguage: String? = null,
     val wordMappings: List<WordMapping> = emptyList()
 )
 

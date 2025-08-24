@@ -52,6 +52,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
+    // Text to speech
+    implementation("androidx.core:core-ktx:1.12.0")
+
     // 🧠 ML Kit Text Recognition (On-device)
     implementation("com.google.mlkit:text-recognition:16.0.0")
 

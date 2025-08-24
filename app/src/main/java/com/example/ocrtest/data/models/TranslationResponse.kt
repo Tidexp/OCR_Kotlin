@@ -1,7 +1,5 @@
 package com.example.ocrtest.data.models
 
-import TranslationText
-
 /**
  * TranslationItem đại diện cho 1 phần tử trong mảng phản hồi từ API Translate.
  *
@@ -19,8 +17,9 @@ import TranslationText
  *  - API trả về mảng, mỗi phần tử có translations,
  *    nên root phải là List<TranslationItem>.
  */
-typealias TranslationResponse = List<TranslationItem>
-
-data class TranslationItem(
-    val translations: List<TranslationText>
+data class TranslationResponse(
+    val translatedText: String,
+    val detectedLanguage: String? = null,
+    val alignment: String? = null
 )
+

@@ -16,6 +16,7 @@ class TranslationRepository(
     suspend fun getLanguages(): List<LanguageOption> {
         return try {
             val res = msApi.getLanguages()
+            Log.d("TranslationRepository", "getLanguages raw response: $res")
             res.translation.map { (code, detail) ->
                 LanguageOption(code, detail.name)
             }
@@ -29,25 +30,40 @@ class TranslationRepository(
     /**
      * Dịch text sang targetLang, trả về OcrResult
      */
-    suspend fun translateText(text: String, targetLang: String): OcrResult {
+    suspend fun translateText(
+        text: String,
+        targetLang: String,
+        sourceLang: String? = null
+    ): OcrResult {
         return try {
             val cleanText = text.replace("\n", " ").trim()
-            val body = mapOf("text" to cleanText, "to" to targetLang)
+            val body = mutableMapOf(
+                "text" to cleanText,
+                "to" to targetLang
+            )
+            sourceLang?.let { body["from"] = it }
 
+            // Gọi backend, parse object
             val res: TranslationResponse = translateApi.translateText(body)
 
-            val translations = res.firstOrNull()?.translations ?: emptyList()
-            val translatedText = translations.joinToString(" ") { it.text }
+            // map alignment nếu có
+            val wordMappings = if (!res.alignment.isNullOrEmpty()) {
+                mapWords(cleanText, res.translatedText, res.alignment)
+            } else {
+                emptyList()
+            }
 
             OcrResult(
                 originalText = text,
-                translatedText = translatedText,
-                wordMappings = emptyList() // có thể update alignment nếu muốn
+                translatedText = res.translatedText,
+                detectedLanguage = res.detectedLanguage,
+                wordMappings = wordMappings
             )
         } catch (e: Exception) {
             OcrResult(
                 originalText = text,
-                translatedText = "Lỗi dịch: ${e.message}"
+                translatedText = "Lỗi dịch: ${e.message}",
+                wordMappings = emptyList()
             )
         }
     }
