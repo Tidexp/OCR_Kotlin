@@ -2,10 +2,10 @@ package com.example.ocrtest.ui.screens
 
 import android.speech.tts.TextToSpeech
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,7 +16,10 @@ import com.example.ocrtest.ui.components.LanguageDropdown
 import com.example.ocrtest.viewmodel.TranslationViewModel
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
@@ -24,6 +27,9 @@ import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
 import com.example.ocrtest.ui.helpers.ClickableTranslatedText
 import com.example.ocrtest.ui.helpers.mergeTranslatedWords
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,37 +99,98 @@ fun OCRTranslateScreen(
 
     LaunchedEffect(Unit) { viewModel.loadLanguages() }
 
-    Scaffold(topBar = { CenterAlignedTopAppBar(title = { Text("📖 OCR Translator") }) }) { padding ->
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("📖 OCR Translator", color = Color.White) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                ),
+                modifier = Modifier.background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF864AD2),
+                            Color(0xFFDC3DD5)
+                        )
+                    )
+                )
+            )
+        }
+    ) { padding ->
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFFFDDDE6)) // nền trắng hồng nhạt
                 .padding(padding)
         ) {
             Column(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(16.dp)
-                    .padding(bottom = 72.dp), // chừa chỗ cho nút
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Buttons chọn ảnh
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ElevatedButton(onClick = onPickImage, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.Photo, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Thư viện")
+                var expanded by remember { mutableStateOf(false) }
+
+                // ✅ Row chứa 2 nút (Quét ảnh + Dịch) ở ngay trên OCR Text
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Nút Quét ảnh (Dropdown)
+                    Box(modifier = Modifier.weight(1f)) {
+                        GradientButton(
+                            text = "Quét ảnh",
+                            icon = Icons.Default.CameraAlt,
+                            gradient = Brush.linearGradient(
+                                colors = listOf(Color(0xFF864AD2), Color(0xFFDC3DD5))
+                            ),
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("📷 Chụp ảnh") },
+                                onClick = {
+                                    expanded = false
+                                    onCaptureImage()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("🖼️ Thư viện") },
+                                onClick = {
+                                    expanded = false
+                                    onPickImage()
+                                }
+                            )
+                        }
                     }
-                    ElevatedButton(onClick = onCaptureImage, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Camera")
-                    }
+
+                    // Nút Dịch
+                    GradientButton(
+                        text = "Dịch",
+                        icon = Icons.Default.Translate,
+                        gradient = Brush.linearGradient(
+                            colors = listOf(Color(0xFF864AD2), Color(0xFFDC3DD5))
+                        ),
+                        onClick = { viewModel.translateText(targetLang) },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 // OCR Text
                 Box(Modifier.fillMaxWidth()) {
-                    Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(6.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(6.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White // ✅ nền trắng
+                        )
+                    ) {
                         Column(Modifier.padding(12.dp)) {
                             Text("OCR Text Language:", style = MaterialTheme.typography.labelLarge)
                             LanguageDropdown(
@@ -200,7 +267,7 @@ fun OCRTranslateScreen(
                 Box(Modifier.fillMaxWidth()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F0FF)),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(4.dp)
                     ) {
                         Column(Modifier.padding(12.dp)) {
@@ -212,17 +279,30 @@ fun OCRTranslateScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(6.dp))
-                            TextField(
-                                value = translationResult?.translatedText ?: "",
-                                onValueChange = {},
-                                readOnly = true,
+
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(180.dp),
-                                singleLine = false,
-                                maxLines = Int.MAX_VALUE,
-                                placeholder = { Text("Chưa có bản dịch") }
-                            )
+                                    .height(180.dp)
+                                    .background(Color(0xFFFBF1F3), RoundedCornerShape(12.dp))
+                                    .padding(8.dp)
+                            ) {
+                                BasicTextField(
+                                    value = translationResult?.translatedText ?: "",
+                                    onValueChange = {},
+                                    modifier = Modifier.fillMaxSize(),
+                                    readOnly = true,
+                                    textStyle = TextStyle(color = Color.Black),
+                                    singleLine = false,
+                                    maxLines = Int.MAX_VALUE,
+                                    decorationBox = { innerTextField ->
+                                        if ((translationResult?.translatedText ?: "").isEmpty()) {
+                                            Text("Chưa có bản dịch", color = Color.Gray)
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                            }
                         }
                     }
                     // Translated Speak button
@@ -253,18 +333,40 @@ fun OCRTranslateScreen(
                     }
                 }
             }
+        }
+    }
+}
 
-            Button(
-                onClick = { viewModel.translateText(targetLang) },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-            ) {
-                Text("Dịch")
+@Composable
+fun GradientButton(
+    text: String,
+    icon: ImageVector,
+    gradient: Brush,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(50.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+        contentPadding = PaddingValues(), // bỏ padding mặc định
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(gradient, shape = RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text(text, color = Color.White)
             }
         }
     }
 }
+
 
 
 

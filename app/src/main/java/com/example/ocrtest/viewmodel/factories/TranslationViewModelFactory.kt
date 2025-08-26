@@ -1,8 +1,9 @@
-package com.example.ocrtest.viewmodel
+package com.example.ocrtest.viewmodel.factories
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.ocrtest.data.repository.TranslationRepository
+import com.example.ocrtest.viewmodel.TranslationViewModel
 
 /**
  * Factory riêng cho TranslationViewModel

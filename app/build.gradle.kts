@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -67,11 +68,29 @@ dependencies {
     implementation ("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
+    // Navbar
+    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // ViewModel hỗ trợ trực tiếp cho Jetpack Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+
+    // Compose Foundation Layout (padding, Column, Row, Box...)
     implementation(libs.androidx.foundation.layout.android)
+
+    // AppCompat (giúp tương thích ngược với các version Android cũ, cung cấp theme & compat widget)
     implementation(libs.androidx.appcompat)
 
+    // Icons
     implementation("androidx.compose.material:material-icons-extended:1.6.8")
+    implementation(libs.androidx.room.common.jvm)
+    implementation(libs.androidx.room.runtime.android)
+
+    val roomVersion = "2.7.0-alpha07"
+
+    implementation("androidx.room:room-runtime:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
